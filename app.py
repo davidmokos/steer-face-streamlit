@@ -1,3 +1,4 @@
+import json
 import time
 from urllib.parse import quote
 
@@ -10,11 +11,11 @@ import uuid
 BASE_URL = "https://face.steercode.com/api/v1"
 
 # Initialize Firebase
-cred = credentials.Certificate("firebase_credentials.json")
+cred = credentials.Certificate(json.loads(st.secrets["firebase"]["credentials"], strict=False))
 
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
-        'storageBucket': 'steer-bb667.appspot.com'
+        'storageBucket': 'promptcontest-356e0.appspot.com'
     })
 
 
