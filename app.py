@@ -1,5 +1,5 @@
 import time
-from datetime import timedelta
+from urllib.parse import quote
 
 import streamlit as st
 import requests
@@ -7,7 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, storage
 import uuid
 
-BASE_URL = "https://steer-video.vercel.app/api"
+BASE_URL = "https://face.steercode.com/api/v1"
 
 # Initialize Firebase
 cred = credentials.Certificate("firebase_credentials.json")
@@ -19,28 +19,43 @@ if not firebase_admin._apps:
 
 
 def video_to_text(original_video_url):
-    result = requests.get(f"{BASE_URL}/video_to_text?video_url={original_video_url}")
+    url = f"{BASE_URL}/video_to_text?video_url={quote(original_video_url)}"
+    print(url)
+    result = requests.get(url)
+    print(result.status_code, result.text)
     return result.json()['result']
 
 
 def translate(text, language):
-    result = requests.get(f"{BASE_URL}/translate?text={text}?&lang={language}")
+    url = f"{BASE_URL}/translate?text={quote(text)}?&lang={quote(language)}"
+    print(url)
+    result = requests.get(url)
+    print(result.status_code, result.text)
     return result.json()["message"]
 
 
 def text_to_speech(translation):
-    result = requests.get(f"{BASE_URL}/text_to_speach?text={translation}&session_id=123")
+    url = f"{BASE_URL}/text_to_speach?text={quote(translation)}&session_id=123"
+    print(url)
+    result = requests.get(url)
+    print(result.status_code, result.text)
     return result.json()['result_url']
 
 
 def create_new_video(original_video_url, audio_url):
-    url = f"https://votrumar--wav2lib-v1-execute.modal.run/?input_video_url={original_video_url}&input_audio_url={audio_url}"
+
+    url = f"https://votrumar--wav2lib-v1-execute.modal.run/?input_video_url={quote(original_video_url)}&input_audio_url={quote(audio_url)}"
+    print(url)
     result = requests.get(url)
-    return result.text
+    print(result.status_code, result.text)
+    video_url = result.text
+    if video_url[0] == '"':
+        video_url = video_url[1:-1]
+    return video_url
 
 
 def download_file(url):
-    local_filename = url.split('/')[-1]
+    local_filename = "/tmp/generated_video.mp4"
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(local_filename, 'wb') as f:
@@ -107,6 +122,7 @@ elif st.session_state['state'] == 2:
         with st.spinner(text='Generating audio...'):
             st.session_state['new_audio_url'] = text_to_speech(translated_updated)
             st.success('Audio created')
+            st.text(st.session_state['new_audio_url'])
 
         with st.spinner(text='Generating video with the new audio...'):
             st.session_state['new_video_url'] = create_new_video(st.session_state['video_url'], st.session_state['new_audio_url'])
@@ -120,6 +136,9 @@ elif st.session_state['state'] == 3:
     st.text(st.session_state['new_video_url'])
     filename = download_file(st.session_state['new_video_url'])
     st.video(filename)
+    with open(filename, "rb") as file:
+        st.download_button(label="Download", data=file, file_name="output_video.mp4")
+
 
 
 
